@@ -14,3 +14,7 @@ app-config.local.yaml
 .DS_Store
 .vscode/
 .idea/
+
+# Website build output (tools/build-site.sh)
+_site-src/
+site/

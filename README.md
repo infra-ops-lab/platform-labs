@@ -55,6 +55,7 @@ that uses them.
 
 ## Reading the guides
 
+- **Website:** https://infra-ops-lab.github.io/platform-labs/ (sidebar, search, copy buttons). Built from these READMEs on every push; preview locally with `pip install -r tools/requirements-docs.txt && ./tools/build-site.sh serve`.
 - VS Code: open a `README.md` and press `Cmd+Shift+V` (macOS) or `Ctrl+Shift+V` for the preview.
 - On GitHub or Gitea the README renders automatically.
 

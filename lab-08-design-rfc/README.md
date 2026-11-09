@@ -47,7 +47,7 @@ wc -w ~/rfc-cell-placement.md        # check the length when you're done
 
 ## Hints
 
-<details><summary>Hint 1: the options</summary>
+<details markdown="1"><summary>Hint 1: the options</summary>
 
 | Option | Good at | Weak at |
 |---|---|---|
@@ -57,7 +57,7 @@ wc -w ~/rfc-cell-placement.md        # check the length when you're done
 | Hybrid | Shared cells for most tenants, dedicated cells for regulated or large ones | Two kinds of cell to run (but the same blueprint) |
 </details>
 
-<details><summary>Hint 2: make the cell a product</summary>
+<details markdown="1"><summary>Hint 2: make the cell a product</summary>
 
 - **A fixed blueprint**: Terraform or Crossplane builds every cell the same way; add-ons come
   from ApplicationSets (Labs 1, 5, 6).
@@ -68,7 +68,7 @@ wc -w ~/rfc-cell-placement.md        # check the length when you're done
 - **Rings**: canary cell → ring 0 → ring 1 … (Lab 4), canaries inside each cell (Lab 6).
 </details>
 
-<details><summary>Hint 3: metrics</summary>
+<details markdown="1"><summary>Hint 3: metrics</summary>
 
 - **Blast radius**: the largest % of tenants one bad deploy can affect.
 - **Cell provisioning time**: from "we need a cell" to "it takes tenants".
@@ -77,7 +77,7 @@ wc -w ~/rfc-cell-placement.md        # check the length when you're done
 - **Migration progress**: % of tenants on cells.
 </details>
 
-<details><summary>Hint 4: the 3-minute answer</summary>
+<details markdown="1"><summary>Hint 4: the 3-minute answer</summary>
 
 Structure: **blast radius → noisy neighbours → compliance boundary → upgrades → limits → what
 it costs**. One big cluster makes every control-plane upgrade, CNI bug or bad admission

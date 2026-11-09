@@ -91,4 +91,4 @@ app:
 ## Never commit
 
 kubeconfigs, `*.kubeconfig`, Gitea or Argo CD passwords, access tokens, `app-config.local.yaml`.
-The [`.gitignore`](../.gitignore) at the repo root covers the common ones.
+The [`.gitignore`](https://github.com/infra-ops-lab/platform-labs/blob/main/.gitignore) at the repo root covers the common ones.

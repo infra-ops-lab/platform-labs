@@ -54,7 +54,7 @@ $KUBECONFIG ─► load all contexts ─► for each context, in parallel (each 
 
 ### Hints (open one at a time)
 
-<details><summary>Hint 1: load every context</summary>
+<details markdown="1"><summary>Hint 1: load every context</summary>
 
 ```go
 rules := clientcmd.NewDefaultClientConfigLoadingRules()   // honours $KUBECONFIG
@@ -63,7 +63,7 @@ for name := range cfg.Contexts { ... }                     // map: sort the name
 ```
 </details>
 
-<details><summary>Hint 2: a clientset for one context</summary>
+<details markdown="1"><summary>Hint 2: a clientset for one context</summary>
 
 ```go
 rest, err := clientcmd.NewNonInteractiveClientConfig(*cfg, name, &clientcmd.ConfigOverrides{}, rules).ClientConfig()
@@ -72,7 +72,7 @@ cs, err := kubernetes.NewForConfig(rest)
 ```
 </details>
 
-<details><summary>Hint 3: make it testable</summary>
+<details markdown="1"><summary>Hint 3: make it testable</summary>
 
 Keep "ask the cluster" apart from "print the report":
 
@@ -83,13 +83,13 @@ func Missing(ctx context.Context, cs kubernetes.Interface, label string) ([]stri
 In the test: `cs := fake.NewSimpleClientset(&corev1.Namespace{...}, ...)`.
 </details>
 
-<details><summary>Hint 4: concurrency without a mutex</summary>
+<details markdown="1"><summary>Hint 4: concurrency without a mutex</summary>
 
 Make `results := make([]result, len(names))` and let goroutine `i` write only `results[i]`.
 Nothing is shared, so there's no lock, and the output order is stable.
 </details>
 
-<details><summary>Hint 5: big clusters</summary>
+<details markdown="1"><summary>Hint 5: big clusters</summary>
 
 `List` with `Limit: 500` and follow `Continue` until it's empty (pagination). A cluster with
 5,000 namespaces shouldn't be one giant response.
@@ -136,7 +136,7 @@ exit=2
 
 ## Reference solution
 
-[`solution/`](solution/): `main.go` (flags, fan-out, output, exit codes), `audit.go` (the
+[`solution/`](https://github.com/infra-ops-lab/platform-labs/tree/main/lab-07-go-fleet-cli/solution): `main.go` (flags, fan-out, output, exit codes), `audit.go` (the
 testable `Missing` function with pagination), `audit_test.go` (fake clientset). Try it yourself
 first, then compare.
 

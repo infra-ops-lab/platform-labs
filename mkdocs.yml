@@ -1,0 +1,59 @@
+# Builds the lab guides into a website (GitHub Pages). The READMEs stay the source:
+# tools/build-site.sh copies them into _site-src/ and runs `mkdocs build`.
+site_name: Platform engineering labs
+site_description: Hands-on labs for a small internal developer platform on one laptop
+repo_url: https://github.com/infra-ops-lab/platform-labs
+repo_name: infra-ops-lab/platform-labs
+edit_uri: edit/main/
+docs_dir: _site-src
+site_dir: site
+
+nav:
+  - Home: README.md
+  - Setup: setup/README.md
+  - "0 · Fleet tour": lab-00-fleet-tour/README.md
+  - "1 · Fleet GitOps": lab-01-fleet-gitops/README.md
+  - "2 · Golden path": lab-02-golden-path/README.md
+  - "3 · Run the golden path": lab-03-run-golden-path/README.md
+  - "4 · Progressive delivery": lab-04-progressive-delivery/README.md
+  - "5 · Guardrails": lab-05-guardrails/README.md
+  - "6 · Canary releases": lab-06-canary-rollouts/README.md
+  - "7 · Fleet CLI in Go": lab-07-go-fleet-cli/README.md
+  - "8 · Design RFC": lab-08-design-rfc/README.md
+  - "9 · Self-service database": lab-09-crossplane-database/README.md
+  - "10 · Supply chain": lab-10-supply-chain/README.md
+  - "11 · Cost per tenant": lab-11-cost-per-tenant/README.md
+  - "12 · Kafka topics as code": lab-12-kafka-topics/README.md
+
+theme:
+  name: material
+  features:
+    - content.code.copy        # copy button on every command block
+    - navigation.top           # "back to top" button
+    - navigation.footer        # previous / next lab at the bottom
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: { icon: material/weather-sunny, name: Light mode }
+
+markdown_extensions:
+  - tables
+  - admonition
+  - md_in_html                 # Markdown inside <details markdown="1"> (the hints)
+  - toc: { permalink: true }
+  - pymdownx.superfences
+  - pymdownx.highlight: { anchor_linenums: false }
+
+not_in_nav: |
+  /lab-02-golden-path/golden-service/skeleton/
+  /lab-08-design-rfc/rfc-template.md
+
+validation:
+  links:
+    not_found: warn
+    anchors: warn
