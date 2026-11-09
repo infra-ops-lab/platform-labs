@@ -18,3 +18,4 @@ app-config.local.yaml
 # Website build output (tools/build-site.sh)
 _site-src/
 site/
+.venv/
