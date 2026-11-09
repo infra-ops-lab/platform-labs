@@ -24,6 +24,7 @@ nav:
   - "10 · Supply chain": lab-10-supply-chain/README.md
   - "11 · Cost per tenant": lab-11-cost-per-tenant/README.md
   - "12 · Kafka topics as code": lab-12-kafka-topics/README.md
+  - Quiz: quiz/README.md
 
 theme:
   name: material

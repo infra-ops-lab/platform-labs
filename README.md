@@ -38,6 +38,8 @@ and questions to think through.
 
 Labs 6–12 build on Labs 1–5; 7, 8 and 9 can be done in any order.
 
+**Test yourself:** [Quiz](quiz/README.md): 80 multiple-choice questions on every lab, with answers and explanations. The website also has an [interactive version](https://infra-ops-lab.github.io/platform-labs/quiz/play.html) (random order, pick the labs, score).
+
 ## Conventions used in every lab
 
 | Thing | Convention |

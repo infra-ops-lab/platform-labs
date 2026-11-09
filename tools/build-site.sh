@@ -3,6 +3,7 @@
 # Needs: pip install -r tools/requirements-docs.txt
 set -euo pipefail
 cd "$(dirname "$0")/.."
+python3 tools/quiz-to-md.py          # quiz/README.md from quiz/questions.json
 rm -rf _site-src && mkdir _site-src
 # every lab file (Markdown, YAML, scripts, Go) goes in, so links to files work on the site too
 rsync -a --exclude '.git' --exclude '.github' --exclude '_site-src' --exclude 'site' \

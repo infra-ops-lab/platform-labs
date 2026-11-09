@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Platform Labs Quiz</title>
+<meta name="description" content="Multiple-choice questions on the platform engineering labs: fleet GitOps, golden paths, guardrails, canaries, supply chain and more.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: one narrow column, like a terminal session: a header line, one question at a time, a status line. */
+:root {
+  --bg: #f3f5f6;
+  --panel: #ffffff;
+  --fg: #16212b;
+  --muted: #5b6874;
+  --line: #d5dce1;
+  --accent: #1f6f8b;          /* deep teal: links, focus, selected chips */
+  --accent-soft: #e2eff4;
+  --ok: #1d7a46; --ok-soft: #e3f3e9;
+  --bad: #b23a2e; --bad-soft: #f8e6e3;
+  --code-bg: #e9eef1;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f161c; --panel: #16202a; --fg: #e3e9ee; --muted: #93a1ad; --line: #2a3742;
+    --accent: #5fb3d0; --accent-soft: #17303b;
+    --ok: #5cc98a; --ok-soft: #14301f; --bad: #f08a7e; --bad-soft: #3a1c19;
+    --code-bg: #22303b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f161c; --panel: #16202a; --fg: #e3e9ee; --muted: #93a1ad; --line: #2a3742;
+  --accent: #5fb3d0; --accent-soft: #17303b;
+  --ok: #5cc98a; --ok-soft: #14301f; --bad: #f08a7e; --bad-soft: #3a1c19;
+  --code-bg: #22303b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+main { max-width: 44rem; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+h1 { font: 600 1.6rem/1.2 var(--font-display); margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+h2 { font: 600 1.15rem/1.3 var(--font-display); margin: 0; letter-spacing: 0.01em; }
+a { color: var(--accent); }
+.prompt { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; min-width: 0; }
+.label { font: 600 0.72rem/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font: 500 0.85rem/1 var(--font-body); color: var(--fg); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.chip small { font-family: var(--font-mono); color: var(--muted); margin-left: 4px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button.primary, button.secondary {
+  font: 600 0.95rem/1 var(--font-body); border-radius: 8px; padding: 12px 18px; cursor: pointer; border: 1px solid var(--accent);
+}
+button.primary { background: var(--accent); color: var(--panel); }
+button.secondary { background: transparent; color: var(--accent); }
+button:focus-visible, .opt:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); width: 0; transition: width 0.25s ease; }
+.question { font-size: 1.12rem; font-weight: 500; line-height: 1.45; text-wrap: pretty; }
+.opts { display: grid; gap: 10px; }
+.opt {
+  display: grid; grid-template-columns: 2rem 1fr; gap: 10px; align-items: start; text-align: left;
+  font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 12px 14px; cursor: pointer; min-width: 0;
+}
+.opt:hover:not(:disabled) { border-color: var(--accent); }
+.opt .key { font: 600 0.85rem/1.7 var(--font-mono); color: var(--muted); }
+.opt span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.opt:disabled { cursor: default; }
+.opt.right { border-color: var(--ok); background: var(--ok-soft); }
+.opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.verdict { display: flex; align-items: center; gap: 10px; font: 600 0.9rem/1.2 var(--font-mono); }
+.status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font: 600 0.8rem/1 var(--font-mono); }
+.status.ok { background: var(--ok-soft); color: var(--ok); }
+.status.bad { background: var(--bad-soft); color: var(--bad); }
+.why { border-left: 3px solid var(--line); padding-left: 12px; color: var(--fg); }
+.score { font: 600 2.6rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.missed { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.missed li { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 6px; min-width: 0; }
+.small { font-size: 0.85rem; color: var(--muted); }
+.hint { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .bar > span { transition: none; } }
+@media (max-width: 480px) { .panel { padding: 16px; } .question { font-size: 1.04rem; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Platform Labs Quiz</h1>
+    <span class="prompt">$ kubectl get quiz --watch</span>
+  </header>
+
+  <!-- 1. choose labs -->
+  <section class="panel" id="setup" aria-labelledby="setup-title">
+    <h2 id="setup-title">Pick the labs to practise</h2>
+    <div class="chips" id="labChips" role="group" aria-label="Labs"></div>
+    <div class="row">
+      <span class="label">Questions</span>
+      <div class="chips" id="countChips" role="group" aria-label="Number of questions"></div>
+    </div>
+    <div class="row">
+      <button class="primary" id="startBtn" type="button">Start</button>
+      <span class="small" id="poolInfo"></span>
+    </div>
+    <p class="small" id="loadMsg">Loading questions…</p>
+  </section>
+
+  <!-- 2. one question at a time -->
+  <section class="panel" id="play" hidden aria-live="polite">
+    <div class="meta"><span id="progress"></span><span id="labName"></span><span id="running"></span></div>
+    <div class="bar" aria-hidden="true"><span id="barFill"></span></div>
+    <div class="question" id="qText"></div>
+    <div class="opts" id="opts"></div>
+    <div id="feedback" hidden>
+      <div class="verdict" id="verdict"></div>
+      <p class="why" id="why"></p>
+    </div>
+    <div class="row">
+      <button class="primary" id="nextBtn" type="button" hidden>Next</button>
+      <button class="secondary" id="quitBtn" type="button">End round</button>
+      <span class="hint">Keys: 1–4 to answer, Enter for next</span>
+    </div>
+  </section>
+
+  <!-- 3. result -->
+  <section class="panel" id="result" hidden>
+    <span class="label">Round finished</span>
+    <div class="row"><span class="score" id="score"></span><span class="status" id="scoreStatus"></span></div>
+    <div class="row">
+      <button class="primary" id="retryBtn" type="button">Retry the ones I missed</button>
+      <button class="secondary" id="againBtn" type="button">New round</button>
+    </div>
+    <h2 id="missedTitle">To revisit</h2>
+    <ul class="missed" id="missed"></ul>
+  </section>
+
+  <p class="small">Questions come from <code>quiz/questions.json</code>. All of them, with answers, are on the <a href="./">quiz page</a>.</p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var NAMES = {0: "Fleet tour", 1: "Fleet GitOps", 2: "Golden path", 3: "Run the golden path",
+    4: "Progressive delivery", 5: "Guardrails", 6: "Canary releases", 7: "Fleet CLI in Go",
+    8: "Design RFC", 9: "Self-service database", 10: "Supply chain", 11: "Cost per tenant",
+    12: "Kafka topics as code", 99: "Mixed scenarios"};
+  var COUNTS = [10, 20, 0];               // 0 = all
+  var $ = function (id) { return document.getElementById(id); };
+  var all = [], selectedLabs = new Set(), count = 10, round = [], i = 0, right = 0, missed = [], answered = false;
+
+  function store(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+  function load(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
+
+  // Escape, then turn `code` into <code>
+  function fmt(s) {
+    var esc = String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return esc.replace(/`([^`]+)`/g, "<code>$1</code>");
+  }
+  function shuffle(a) { a = a.slice(); for (var k = a.length - 1; k > 0; k--) { var j = Math.floor(Math.random() * (k + 1)); var t = a[k]; a[k] = a[j]; a[j] = t; } return a; }
+  function labTitle(n) { return n === 99 ? NAMES[99] : "Lab " + n + " · " + NAMES[n]; }
+
+  function pool() { return all.filter(function (q) { return selectedLabs.has(q.lab); }); }
+
+  function renderSetup() {
+    var labs = Array.from(new Set(all.map(function (q) { return q.lab; }))).sort(function (a, b) { return a - b; });
+    $("labChips").innerHTML = "";
+    var allChip = chip("All labs", selectedLabs.size === labs.length, function () {
+      var on = selectedLabs.size !== labs.length; selectedLabs = new Set(on ? labs : []); renderSetup();
+    });
+    $("labChips").appendChild(allChip);
+    labs.forEach(function (n) {
+      var c = chip(n === 99 ? "Scenarios" : n + " " + NAMES[n], selectedLabs.has(n), function () {
+        if (selectedLabs.has(n)) selectedLabs.delete(n); else selectedLabs.add(n); renderSetup();
+      }, all.filter(function (q) { return q.lab === n; }).length);
+      $("labChips").appendChild(c);
+    });
+    $("countChips").innerHTML = "";
+    COUNTS.forEach(function (n) {
+      $("countChips").appendChild(chip(n ? String(n) : "All", count === n, function () { count = n; renderSetup(); }));
+    });
+    var p = pool().length;
+    $("poolInfo").textContent = p + " question" + (p === 1 ? "" : "s") + " in the selected labs";
+    $("startBtn").disabled = p === 0;
+    store("quiz.labs", Array.from(selectedLabs)); store("quiz.count", count);
+  }
+  function chip(text, on, onClick, n) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.textContent = text;
+    if (n) { var s = document.createElement("small"); s.textContent = n; b.appendChild(s); }
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  function start(questions) {
+    round = shuffle(questions);
+    if (count && round.length > count) round = round.slice(0, count);
+    i = 0; right = 0; missed = [];
+    $("setup").hidden = true; $("result").hidden = true; $("play").hidden = false;
+    show();
+  }
+
+  function show() {
+    var q = round[i]; answered = false;
+    $("progress").textContent = "Question " + (i + 1) + " / " + round.length;
+    $("labName").textContent = labTitle(q.lab);
+    $("running").textContent = right + " healthy";
+    $("barFill").style.width = (i / round.length * 100) + "%";
+    $("qText").innerHTML = fmt(q.q);
+    $("feedback").hidden = true; $("nextBtn").hidden = true;
+    var order = shuffle(q.options.map(function (_, k) { return k; }));
+    $("opts").innerHTML = "";
+    order.forEach(function (k, pos) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "opt"; b.dataset.k = k;
+      b.innerHTML = '<span class="key">' + "abcd"[pos] + ')</span><span>' + fmt(q.options[k]) + "</span>";
+      b.addEventListener("click", function () { choose(k); });
+      $("opts").appendChild(b);
+    });
+    var first = $("opts").querySelector(".opt"); if (first) first.focus({preventScroll: true});
+  }
+
+  function choose(k) {
+    if (answered) return; answered = true;
+    var q = round[i], ok = k === q.answer;
+    if (ok) right++; else missed.push(q);
+    Array.prototype.forEach.call($("opts").children, function (b) {
+      var bk = Number(b.dataset.k); b.disabled = true;
+      if (bk === q.answer) b.classList.add("right");
+      else if (bk === k) b.classList.add("wrong");
+    });
+    $("verdict").innerHTML = ok
+      ? '<span class="status ok">✔ Healthy</span><span>Correct</span>'
+      : '<span class="status bad">✖ Degraded</span><span>Not quite: the correct answer is highlighted</span>';
+    $("why").innerHTML = fmt(q.why);
+    $("feedback").hidden = false;
+    $("running").textContent = right + " healthy";
+    $("nextBtn").textContent = i + 1 < round.length ? "Next" : "See result";
+    $("nextBtn").hidden = false; $("nextBtn").focus({preventScroll: true});
+  }
+
+  function next() { if (!answered) return; i++; if (i < round.length) show(); else finish(); }
+
+  function finish() {
+    var total = answered ? i : i;               // questions actually answered
+    total = Math.min(total, round.length);
+    $("play").hidden = true; $("result").hidden = false;
+    $("score").textContent = right + " / " + total;
+    var pct = total ? right / total : 0;
+    var st = $("scoreStatus");
+    st.className = "status " + (pct >= 0.8 ? "ok" : "bad");
+    st.textContent = pct >= 0.8 ? "✔ Healthy" : pct >= 0.5 ? "◐ Progressing" : "✖ Degraded";
+    $("missed").innerHTML = "";
+    missed.forEach(function (q) {
+      var li = document.createElement("li");
+      li.innerHTML = '<span class="label">' + fmt(labTitle(q.lab)) + "</span><strong>" + fmt(q.q) + "</strong>" +
+        "<span>Answer: " + fmt(q.options[q.answer]) + '</span><span class="small">' + fmt(q.why) + "</span>";
+      $("missed").appendChild(li);
+    });
+    $("missedTitle").hidden = missed.length === 0;
+    $("retryBtn").hidden = missed.length === 0;
+  }
+
+  $("startBtn").addEventListener("click", function () { start(pool()); });
+  $("nextBtn").addEventListener("click", next);
+  $("quitBtn").addEventListener("click", function () { if (answered) i++; finish(); });
+  $("retryBtn").addEventListener("click", function () { var m = missed.slice(); count = 0; start(m); });
+  $("againBtn").addEventListener("click", function () {
+    count = load("quiz.count") ?? 10;
+    $("result").hidden = true; $("setup").hidden = false; renderSetup();
+  });
+  document.addEventListener("keydown", function (e) {
+    if ($("play").hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!answered && /^[1-4]$/.test(e.key)) {
+      var b = $("opts").children[Number(e.key) - 1]; if (b) { e.preventDefault(); b.click(); }
+    } else if (answered && e.key === "Enter" && document.activeElement !== $("quitBtn")) { e.preventDefault(); next(); }
+  });
+
+  fetch("questions.json")
+    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function (data) {
+      all = data;
+      var labs = new Set(all.map(function (q) { return q.lab; }));
+      var saved = load("quiz.labs");
+      selectedLabs = new Set(Array.isArray(saved) && saved.length ? saved.filter(function (n) { return labs.has(n); }) : Array.from(labs));
+      if (selectedLabs.size === 0) selectedLabs = new Set(labs);
+      var c = load("quiz.count"); if (COUNTS.indexOf(c) >= 0) count = c;
+      $("loadMsg").hidden = true;
+      renderSetup();
+    })
+    .catch(function () {
+      $("loadMsg").textContent = "Couldn't load questions.json. Open this page from the website (or a local web server such as `mkdocs serve`), not as a file.";
+      $("startBtn").disabled = true;
+    });
+})();
+</script>
+</body>
+</html>
