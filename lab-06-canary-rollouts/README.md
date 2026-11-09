@@ -6,9 +6,29 @@ Lab 4's rings protect the **fleet**: cell-1 first, then cell-2. This lab protect
 a new version first gets a small share of the pods, is tested automatically, and is rolled back
 by itself if the test fails. Nobody has to watch a dashboard.
 
+### What you will prove
+
+| # | Test | What you do | What you should see | What it proves |
+|---|---|---|---|---|
+| 1 | Adopt | Replace the Deployment with a Rollout, in Git | 4 pods, Rollout **Healthy** | Canaries can be adopted through Git, with no change for developers |
+| 2 | Good release | Change the message `v1` → `v2` | 25% → analysis ✔ → 50% → 100%, then cell-2 follows | A healthy change ships with nobody watching |
+| 3 | Bad release | Start podinfo with `--random-error=true` | Analysis ✖ → **RolloutAborted**, stable stays 4/4, cell-2 untouched | The test catches what health checks miss; blast radius = 1 pod in 1 cell |
+| 4 | Recover | `git revert` | Healthy at once, no new canary | Git stays the source of truth |
+
 ---
 
 ## Part A: The ideas in plain words
+
+### A0. Why bother?
+
+With a plain Deployment, a push replaces all 4 pods. If the new version is broken in a way
+Kubernetes can't see (pods are Ready, users get errors), **everyone** gets the errors,
+**nobody** notices until someone complains, and **a person** has to roll back. Lab 4's rings
+make cell-2 wait for cell-1, but inside cell-1 everyone is still hit at once.
+
+> Rings limit the blast radius across the **fleet**; canaries with automatic analysis limit it
+> inside each **cluster**, so a bad release is caught and rolled back by software, not by a
+> person watching dashboards.
 
 ### A1. Canary
 
@@ -57,6 +77,43 @@ In production the judge is a metrics query: "is the canary's error rate or p99 l
 than stable?". There's no Prometheus yet (that's Lab 11), so this lab uses the `web` provider:
 call the canary 30 times, once a second, and any non-2xx answer fails it.
 
+### A6. What gets installed: a new kind, a controller, a CLI
+
+`Rollout` is a **kind**, like `Deployment`, but it doesn't ship with Kubernetes. Kubernetes can
+be extended with a **CustomResourceDefinition (CRD)**, which teaches the API server a new kind,
+and a **controller**, which watches objects of that kind and acts on them. A CRD alone only
+stores objects; nothing happens until a controller reconciles them (the *operator pattern*).
+
+| Part | Where it runs | What it does |
+|---|---|---|
+| CRDs: `Rollout`, `AnalysisTemplate`, `AnalysisRun`, … (`argoproj.io/v1alpha1`) | API server of each cell | Make the new kinds valid YAML |
+| **Controller** (pod `argo-rollouts-<cell>-…`) | Each cell | Runs the steps, the analysis and the abort |
+| **kubectl plugin** `kubectl-argo-rollouts` (optional) | Your machine | A readable tree view, plus `promote` / `abort` / `retry` / `dashboard` |
+
+```bash
+kubectl --context cell-1 get crd | grep argoproj.io
+kubectl --context cell-1 explain rollout.spec.strategy.canary
+```
+
+**Two version numbers.** The Helm **chart** `argo-rollouts` **2.43.9** is the installer; it
+ships the **app** (controller) **v1.10.2**. You pin the chart version in the ApplicationSet, and
+you keep the kubectl plugin on the app version. (Same idea as Kyverno in Lab 5: chart 3.9.2 →
+Kyverno v1.19.2.)
+
+You've met this pattern before: Argo CD adds `Application` and `ApplicationSet`, Kyverno adds
+`ClusterPolicy`, and in Lab 9 you define your own kind (`Database`) with Crossplane.
+
+**Argo CD vs Argo Rollouts:**
+
+| | Argo CD | Argo Rollouts |
+|---|---|---|
+| Question it answers | "Does the cluster match Git?" | "How do I replace v1 with v2 safely?" |
+| Runs on | The hub | Every cell |
+| Works on | Applications | Rollouts inside one app |
+
+They work together: Argo CD applies the new Rollout spec from Git; Argo Rollouts moves it step
+by step; Argo CD shows the Rollout's health (Progressing / Healthy / Degraded).
+
 ---
 
 ## Part B: Files in this folder
@@ -88,12 +145,25 @@ kubectl --context cell-1 -n argo-rollouts get pods
 **You should see:** `argo-rollouts-cell-1` and `argo-rollouts-cell-2` Synced / Healthy, with one
 controller pod Running per cell.
 
-Install the kubectl plugin on your Mac:
+Optional: install the kubectl plugin. A kubectl plugin is just an executable named
+`kubectl-<name>` on your `PATH`, so `kubectl argo rollouts …` runs `kubectl-argo-rollouts …`.
+Use the same version as the controller (v1.10.2):
 
 ```bash
+# with Homebrew
 brew install argoproj/tap/kubectl-argo-rollouts
+
+# or without Homebrew: download the single file (macOS Intel shown; use -darwin-arm64 on Apple silicon)
+mkdir -p ~/bin
+curl -fL -o ~/bin/kubectl-argo-rollouts \
+  https://github.com/argoproj/argo-rollouts/releases/download/v1.10.2/kubectl-argo-rollouts-darwin-amd64
+chmod +x ~/bin/kubectl-argo-rollouts      # ~/bin must be on your PATH
+
 kubectl argo rollouts version
 ```
+
+Without the plugin everything still works with plain kubectl:
+`kubectl -n tenant-api get rollout tenant-api -w` and `kubectl -n tenant-api get rs,analysisrun`.
 
 ---
 
