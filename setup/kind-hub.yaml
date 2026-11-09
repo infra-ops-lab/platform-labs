@@ -1,0 +1,13 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: idp-lab
+networking:
+  apiServerAddress: "127.0.0.1"
+  apiServerPort: 6550
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.31.0
+    extraPortMappings:
+      - { containerPort: 30300, hostPort: 3300, listenAddress: "127.0.0.1" }  # Gitea
+      - { containerPort: 30808, hostPort: 8080, listenAddress: "127.0.0.1" }  # Argo CD
+      - { containerPort: 30880, hostPort: 8880, listenAddress: "127.0.0.1" }  # lab registry (Lab 10)

@@ -1,0 +1,29 @@
+# The platform API: what a developer may ask for. No cloud details leak into it.
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: databases.platform.lab
+spec:
+  group: platform.lab
+  names: { kind: Database, plural: databases }
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [size]
+              properties:
+                engine: { type: string, enum: [postgres], default: postgres }
+                size:   { type: string, enum: [small, medium], description: "T-shirt size; maps to instance class per cloud" }
+                tenant: { type: string, description: "Tenant id, used for cost attribution labels" }
+            status:
+              type: object
+              properties:
+                endpoint:         { type: string }
+                connectionSecret: { type: string }

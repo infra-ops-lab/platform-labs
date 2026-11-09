@@ -1,0 +1,32 @@
+# Copy to backstage/app-config.local.yaml (keep that file out of Git).
+# Secrets come from environment variables, never from this file.
+
+integrations:
+  gitea:
+    - host: localhost:3300                 # must match the host in publish:gitea repoUrl
+      baseUrl: http://localhost:3300
+      username: labadmin
+      password: ${GITEA_TOKEN}             # a Gitea access token
+
+catalog:
+  rules:
+    - allow: [Component, System, API, Resource, Location, Group, User, Template]
+  locations:
+    # Paths are relative to backstage/packages/backend
+    - type: file
+      target: ../../examples/entities.yaml
+    - type: file
+      target: ../../examples/org.yaml
+    - type: file
+      target: ../../../catalog/org.yaml              # your teams (Groups)
+    - type: file
+      target: ../../../templates/*/template.yaml     # golden-path templates
+
+# A static token so scripts can call the Backstage API (Authorization: Bearer <token>)
+backend:
+  auth:
+    externalAccess:
+      - type: static
+        options:
+          token: ${BACKSTAGE_LAB_TOKEN}
+          subject: lab-cli

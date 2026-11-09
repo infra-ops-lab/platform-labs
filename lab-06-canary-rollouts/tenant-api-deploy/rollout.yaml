@@ -1,0 +1,56 @@
+# A Rollout is a Deployment spec plus a delivery strategy.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: tenant-api
+spec:
+  replicas: 4                       # 4 pods, so 25% = 1 canary pod
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:                    # must match what the Services select on
+      app.kubernetes.io/name: tenant-api
+      app.kubernetes.io/instance: tenant-api
+      app.kubernetes.io/part-of: golden-path
+  template:
+    metadata:
+      labels:                       # every label the Service selector uses, written out
+        app.kubernetes.io/name: tenant-api
+        app.kubernetes.io/instance: tenant-api
+        app.kubernetes.io/part-of: golden-path
+        platform.golden/tier: tier-2
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: app
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          ports:
+            - { name: http, containerPort: 9898 }
+          env:
+            - { name: PODINFO_UI_MESSAGE, value: "Hello from tenant-api v1" }
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 64Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+  strategy:
+    canary:
+      stableService: tenant-api          # Rollouts adds the stable pod-template-hash to this selector
+      canaryService: tenant-api-canary   # ...and the canary hash here, so the analysis hits only canary pods
+      steps:
+        - setWeight: 25
+        - analysis:
+            templates: [{ templateName: canary-health }]
+            args: [{ name: canary-service, value: tenant-api-canary }]
+        - pause: { duration: 20s }
+        - setWeight: 50
+        - pause: { duration: 20s }
+        # after the last step the Rollout goes to 100%

@@ -1,0 +1,34 @@
+# Kafka-as-a-service, step 1: the Strimzi operator on ring-0 cells (cell-1). It manages Kafka clusters, topics and users
+# as Kubernetes resources, which is what makes "topic as code" possible. (On AWS the same API shape can front MSK.)
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: addon-strimzi
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels: { fleet.lab/cell: cell-1 }
+  template:
+    metadata:
+      name: 'strimzi-{{ .name }}'
+      labels: { fleet.lab/addon: kafka, fleet.lab/cell: '{{ .name }}' }
+    spec:
+      project: default
+      source:
+        repoURL: https://strimzi.io/charts/
+        chart: strimzi-kafka-operator
+        targetRevision: 1.3.1
+        helm:
+          valuesObject:
+            replicas: 1
+            labels: { app.kubernetes.io/part-of: kafka-platform }   # our Kyverno guardrail applies to platform pods too
+      destination:
+        server: '{{ .server }}'
+        namespace: kafka
+      syncPolicy:
+        automated: { prune: true, selfHeal: true }
+        syncOptions: [CreateNamespace=true, ServerSideApply=true]

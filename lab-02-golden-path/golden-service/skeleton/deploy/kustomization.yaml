@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+labels:
+  # Stable identity labels: also used in selectors (selectors are immutable, keep these fixed)
+  - pairs:
+      app.kubernetes.io/name: ${{ values.name }}
+      app.kubernetes.io/instance: ${{ values.name }}
+      app.kubernetes.io/part-of: golden-path
+    includeSelectors: true
+  # Labels that may change over time: on objects and pods, never in selectors
+  - pairs:
+      app.kubernetes.io/version: "6.7.1"
+      app.kubernetes.io/managed-by: argocd
+      platform.golden/tier: ${{ values.tier }}
+    includeSelectors: false
+    includeTemplates: true
+resources:
+  - deployment.yaml
+  - service.yaml

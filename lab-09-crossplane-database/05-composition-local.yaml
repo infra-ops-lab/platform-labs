@@ -1,0 +1,93 @@
+# One Composition per backend, same API. Here: "local" (a Postgres StatefulSet) stands in for the cloud.
+# On EKS the "aws" Composition would render an RDS instance (provider-aws), on AKS an Azure Flexible Server.
+# Developers pick nothing: the platform selects by label (cloud/region of the cell) or a default.
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: database-local
+  labels: { provider: local }
+spec:
+  compositeTypeRef: { apiVersion: platform.lab/v1alpha1, kind: Database }
+  mode: Pipeline
+  pipeline:
+    - step: render
+      functionRef: { name: function-go-templating }
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := $xr.metadata.name }}
+            {{- $small := eq $xr.spec.size "small" }}
+            {{- $tenant := $xr.spec.tenant | default "none" }}
+            {{- $ready := dig "resources" "statefulset" "resource" "status" "readyReplicas" 0.0 .observed }}
+            ---
+            apiVersion: v1
+            kind: Secret
+            metadata:
+              name: {{ $name }}-conn
+              labels: { tenant.lab/id: {{ $tenant }} }
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: secret
+                gotemplating.fn.crossplane.io/ready: "True"
+            stringData:
+              host: {{ $name }}-db.{{ $xr.metadata.namespace }}.svc
+              port: "5432"
+              username: app
+              password: {{ sha256sum $xr.metadata.uid | trunc 24 }}   # stable across reconciles (not rand*)
+            ---
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: {{ $name }}-db
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: service
+                gotemplating.fn.crossplane.io/ready: "True"
+            spec:
+              selector: { app: {{ $name }}-db }
+              ports: [{ port: 5432, targetPort: 5432 }]
+            ---
+            apiVersion: apps/v1
+            kind: StatefulSet
+            metadata:
+              name: {{ $name }}-db
+              labels: { tenant.lab/id: {{ $tenant }}, platform.lab/size: {{ $xr.spec.size }} }
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: statefulset
+                gotemplating.fn.crossplane.io/ready: {{ if ge (float64 $ready) 1.0 }}"True"{{ else }}"False"{{ end }}
+            spec:
+              serviceName: {{ $name }}-db
+              replicas: 1
+              selector: { matchLabels: { app: {{ $name }}-db } }
+              template:
+                metadata: { labels: { app: {{ $name }}-db, app.kubernetes.io/part-of: platform-database, tenant.lab/id: {{ $tenant }} } }
+                spec:
+                  containers:
+                    - name: postgres
+                      image: postgres:16.4-alpine
+                      env:
+                        - { name: POSTGRES_USER, valueFrom: { secretKeyRef: { name: {{ $name }}-conn, key: username } } }
+                        - { name: POSTGRES_PASSWORD, valueFrom: { secretKeyRef: { name: {{ $name }}-conn, key: password } } }
+                        - { name: POSTGRES_DB, value: app }
+                        - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+                      ports: [{ containerPort: 5432 }]
+                      readinessProbe: { exec: { command: [pg_isready, -U, app] }, periodSeconds: 5 }
+                      resources:
+                        requests: { cpu: {{ if $small }}100m{{ else }}500m{{ end }}, memory: {{ if $small }}128Mi{{ else }}512Mi{{ end }} }
+                        limits:   { memory: {{ if $small }}256Mi{{ else }}1Gi{{ end }} }
+                      volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+              volumeClaimTemplates:
+                - metadata: { name: data }
+                  # Storage is NOT tied to size: volumeClaimTemplates are immutable, so a size change that touched
+                  # them would make the whole StatefulSet update fail (found while testing). Grow storage by PVC expansion.
+                  spec: { accessModes: [ReadWriteOnce], resources: { requests: { storage: 1Gi } } }
+            ---
+            apiVersion: platform.lab/v1alpha1
+            kind: Database
+            status:
+              endpoint: {{ $name }}-db.{{ $xr.metadata.namespace }}.svc:5432
+              connectionSecret: {{ $name }}-conn
+    - step: ready
+      functionRef: { name: function-auto-ready }

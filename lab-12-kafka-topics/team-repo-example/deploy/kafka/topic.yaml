@@ -1,0 +1,13 @@
+# Step 3 (self-service): a team declares its topic in ITS OWN repo; Argo CD syncs it. No ticket to a Kafka team.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: identity.tenant-events
+  namespace: kafka                      # the Topic Operator watches the Kafka cluster's namespace
+  labels: { strimzi.io/cluster: platform, platform.lab/team: identity }
+spec:
+  partitions: 6
+  replicas: 1
+  config:
+    retention.ms: 259200000             # 3 days
+    cleanup.policy: delete

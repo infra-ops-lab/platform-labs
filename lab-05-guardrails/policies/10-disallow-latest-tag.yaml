@@ -1,0 +1,49 @@
+# Rule: container images must be pinned to a version, never ":latest".
+# Two rules are needed: "nginx" (no tag at all) silently means "nginx:latest",
+# and the pattern "!*:latest" only catches the tag when it is written out.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow latest tag
+    policies.kyverno.io/description: Images must have an explicit tag, and that tag must not be ":latest".
+spec:
+  background: true                 # also check objects that already exist (for reports)
+  rules:
+  - name: require-image-tag
+    match:
+      any:
+      - resources:
+          kinds: [Pod]
+    exclude:
+      any:
+      - resources:
+          namespaces: [kube-system, kube-public, kube-node-lease, kyverno, argo-rollouts, local-path-storage]
+    validate:
+      failureAction: Audit         # step 1: Audit (report only). Later: Enforce (block)
+      message: "Every image needs an explicit version tag (an image without a tag means ':latest')."
+      pattern:
+        spec:
+          containers:
+          - image: "*:*"
+          =(initContainers):
+          - image: "*:*"
+  - name: no-latest-tag
+    match:
+      any:
+      - resources:
+          kinds: [Pod]
+    exclude:
+      any:
+      - resources:
+          namespaces: [kube-system, kube-public, kube-node-lease, kyverno, argo-rollouts, local-path-storage]
+    validate:
+      failureAction: Audit         # step 1: Audit (report only). Later: Enforce (block)
+      message: "Images must not use ':latest'. Pin a version tag."
+      pattern:
+        spec:
+          containers:
+          - image: "!*:latest"
+          =(initContainers):
+          - image: "!*:latest"

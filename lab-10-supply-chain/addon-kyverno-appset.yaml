@@ -1,0 +1,55 @@
+# Lab 10 version of the Lab 5 Kyverno add-on: same chart and settings, plus permission
+# for Kyverno to read signatures from the lab's plain-HTTP registry.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: addon-kyverno
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - clusters:
+      selector:
+        matchExpressions:
+        - key: fleet.lab/cell            # every cell, never the hub
+          operator: Exists
+  template:
+    metadata:
+      name: 'kyverno-{{ .name }}'
+      labels:
+        fleet.lab/addon: kyverno
+        fleet.lab/cell: '{{ .name }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://kyverno.github.io/kyverno/
+        chart: kyverno
+        targetRevision: 3.9.2            # pinned chart version (Kyverno v1.19.2)
+        helm:
+          valuesObject:
+            # NEW in Lab 10. The lab registry speaks plain HTTP; Kyverno must be allowed to
+            # fetch signatures and attestations from it. In production the registry has TLS
+            # (Harbor, ECR, ACR) and this stays off.
+            admissionController:
+              container:
+                extraArgs: { allowInsecureRegistry: true }
+            reportsController:
+              extraArgs: { allowInsecureRegistry: true }
+      destination:
+        server: '{{ .server }}'
+        namespace: kyverno
+      # Kyverno fills in the rules of its aggregated ClusterRoles at runtime,
+      # so ignore that field when comparing Git with the cluster.
+      ignoreDifferences:
+      - group: rbac.authorization.k8s.io
+        kind: ClusterRole
+        jsonPointers: [/rules]
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+        - ServerSideApply=true           # Kyverno CRDs are too big for client-side apply
+        - RespectIgnoreDifferences=true

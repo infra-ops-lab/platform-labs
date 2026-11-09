@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.name }}
+  description: ${{ values.description | dump }}
+  tags: [golden-path, ${{ values.tier }}]
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    argocd/app-name: ${{ values.name }}
+    backstage.io/kubernetes-id: ${{ values.name }}
+spec:
+  type: service
+  lifecycle: experimental
+  owner: ${{ values.owner }}

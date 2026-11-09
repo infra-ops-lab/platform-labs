@@ -1,0 +1,45 @@
+# Lab 5, part 1: install Kyverno on every cell as a fleet add-on.
+# One Application per cell (kyverno-cell-1, kyverno-cell-2), from the official Helm chart.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: addon-kyverno
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - clusters:
+      selector:
+        matchExpressions:
+        - key: fleet.lab/cell            # every cell, never the hub
+          operator: Exists
+  template:
+    metadata:
+      name: 'kyverno-{{ .name }}'
+      labels:
+        fleet.lab/addon: kyverno
+        fleet.lab/cell: '{{ .name }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://kyverno.github.io/kyverno/
+        chart: kyverno
+        targetRevision: 3.9.2            # pinned chart version (Kyverno v1.19.2)
+      destination:
+        server: '{{ .server }}'
+        namespace: kyverno
+      # Kyverno fills in the rules of its aggregated ClusterRoles at runtime,
+      # so ignore that field when comparing Git with the cluster.
+      ignoreDifferences:
+      - group: rbac.authorization.k8s.io
+        kind: ClusterRole
+        jsonPointers: [/rules]
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+        - ServerSideApply=true           # Kyverno CRDs are too big for client-side apply
+        - RespectIgnoreDifferences=true

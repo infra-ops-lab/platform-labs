@@ -1,0 +1,21 @@
+# Some work in the tenant-acme namespace from Lab 5 (a smaller request than globex), so both tenants have cost.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: tenant-acme
+  labels: { app.kubernetes.io/name: worker, app.kubernetes.io/part-of: acme }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: worker }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: worker, app.kubernetes.io/part-of: acme }
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          resources:
+            requests: { cpu: 100m, memory: 64Mi }
+            limits: { cpu: 250m, memory: 128Mi }

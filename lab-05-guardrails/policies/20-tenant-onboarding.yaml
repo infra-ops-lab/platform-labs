@@ -1,0 +1,85 @@
+# Tenant onboarding as code: label a namespace with tenant.lab/id=<tenant> and Kyverno
+# creates a default-deny NetworkPolicy, a ResourceQuota and a LimitRange inside it.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: tenant-onboarding
+  annotations:
+    policies.kyverno.io/title: Tenant onboarding defaults
+    policies.kyverno.io/description: Namespaces labelled tenant.lab/id get network isolation, a quota and default limits.
+spec:
+  rules:
+  - name: default-deny-network
+    match:
+      any:
+      - resources:
+          kinds: [Namespace]
+          selector:
+            matchExpressions:
+            - { key: tenant.lab/id, operator: Exists }
+    generate:
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      name: tenant-default-deny
+      namespace: "{{ request.object.metadata.name }}"
+      synchronize: true            # if someone edits or deletes it, Kyverno puts it back
+      data:
+        spec:
+          podSelector: {}          # every pod in the namespace
+          policyTypes: [Ingress, Egress]
+          ingress:
+          - from:
+            - podSelector: {}      # only pods from the same namespace
+          egress:
+          - to:
+            - podSelector: {}      # same namespace
+          - to:                    # DNS in kube-system
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: kube-system
+            ports:
+            - { protocol: UDP, port: 53 }
+            - { protocol: TCP, port: 53 }
+  - name: resource-quota
+    match:
+      any:
+      - resources:
+          kinds: [Namespace]
+          selector:
+            matchExpressions:
+            - { key: tenant.lab/id, operator: Exists }
+    generate:
+      apiVersion: v1
+      kind: ResourceQuota
+      name: tenant-quota
+      namespace: "{{ request.object.metadata.name }}"
+      synchronize: true
+      data:
+        spec:
+          hard:
+            requests.cpu: "2"
+            requests.memory: 2Gi
+            limits.cpu: "4"
+            limits.memory: 4Gi
+            pods: "20"
+  - name: limit-range
+    match:
+      any:
+      - resources:
+          kinds: [Namespace]
+          selector:
+            matchExpressions:
+            - { key: tenant.lab/id, operator: Exists }
+    generate:
+      apiVersion: v1
+      kind: LimitRange
+      name: tenant-limits
+      namespace: "{{ request.object.metadata.name }}"
+      synchronize: true
+      data:
+        spec:
+          limits:
+          - type: Container
+            defaultRequest: { cpu: 100m, memory: 128Mi }
+            default:        { cpu: 500m, memory: 256Mi }
+            max:            { cpu: "1",  memory: 1Gi }

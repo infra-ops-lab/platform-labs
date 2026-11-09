@@ -1,0 +1,16 @@
+# Credentials and cluster access: never commit
+*.kubeconfig
+kubeconfig
+kubeconfigs/
+.argocd-admin-pass
+credentials*.txt
+app-config.local.yaml
+.env
+.env.*
+*.pem
+*.key
+
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/

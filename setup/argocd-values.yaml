@@ -1,0 +1,13 @@
+# Argo CD Helm chart (argo/argo-cd) values for the lab hub.
+# Install: helm install argocd argo/argo-cd --version 10.12.1 -n argocd --create-namespace -f argocd-values.yaml
+configs:
+  params:
+    server.insecure: true          # plain HTTP inside the lab (CLI needs --plaintext)
+dex:
+  enabled: false
+notifications:
+  enabled: false
+server:
+  service:
+    type: NodePort
+    nodePortHttp: 30808            # kind maps this to http://localhost:8080

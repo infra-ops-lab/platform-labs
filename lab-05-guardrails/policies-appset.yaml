@@ -1,0 +1,43 @@
+# Lab 5, part 2: deliver the policies from Git (Gitea repo platform/policies) to every cell.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: fleet-policies
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - clusters:
+      selector:
+        matchExpressions:
+        - key: fleet.lab/cell
+          operator: Exists
+  template:
+    metadata:
+      name: 'policies-{{ .name }}'
+      labels:
+        fleet.lab/addon: policies
+        fleet.lab/cell: '{{ .name }}'
+      annotations:
+        # compare using the API server's view, so fields Kyverno fills in by default
+        # don't show up as differences
+        argocd.argoproj.io/compare-options: ServerSideDiff=true
+    spec:
+      project: default
+      source:
+        repoURL: http://gitea-http.gitea.svc:3000/platform/policies.git
+        targetRevision: main
+        path: .
+      destination:
+        server: '{{ .server }}'
+        namespace: kyverno
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - ServerSideApply=true
+        # the ClusterPolicy kind only exists after Kyverno is installed;
+        # don't fail the dry run before that
+        - SkipDryRunOnMissingResource=true

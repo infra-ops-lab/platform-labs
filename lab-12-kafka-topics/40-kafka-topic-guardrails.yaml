@@ -1,0 +1,44 @@
+# Lab 12: guardrails for topics-as-a-service, enforced at admission. Goes into the platform/policies repo.
+#
+# Order matters: push this AFTER Strimzi is installed on the cell. If the policy exists before the
+# KafkaTopic kind does, Kyverno keeps a stale copy and does not check topics until the policy is
+# changed or re-applied (found while testing with Kyverno 1.19).
+---
+# Kyverno's reports and background controllers need to read KafkaTopics to scan existing ones.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno-read-kafkatopics
+  labels:
+    rbac.kyverno.io/aggregate-to-reports-controller: "true"
+    rbac.kyverno.io/aggregate-to-background-controller: "true"
+rules:
+  - apiGroups: [kafka.strimzi.io]
+    resources: [kafkatopics]
+    verbs: [get, list, watch]
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: kafka-topic-guardrails
+spec:
+  rules:
+    - name: naming-and-limits
+      match:
+        any:
+          - resources: { kinds: [kafka.strimzi.io/v1/KafkaTopic] }
+      validate:
+        failureAction: Enforce
+        message: "Topics must be named <team>.<name> (lowercase), use at most 12 partitions and retain at most 7 days."
+        deny:
+          conditions:
+            any:
+              - key: "{{ regex_match('^[a-z0-9-]+\\.[a-z0-9.-]+$', '{{ request.object.metadata.name }}') }}"
+                operator: Equals
+                value: false
+              - key: "{{ request.object.spec.partitions || `1` }}"
+                operator: GreaterThan
+                value: 12
+              - key: "{{ to_number(request.object.spec.config.\"retention.ms\" || `0`) }}"
+                operator: GreaterThan
+                value: 604800000

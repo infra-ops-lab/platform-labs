@@ -1,0 +1,39 @@
+# Supply chain at admission: images from the platform registry must be signed by the platform key
+# AND carry an SPDX SBOM attestation signed by the same key. The tag is replaced by the digest
+# (mutateDigest), so what was verified is exactly what runs.
+#
+# Before you push: replace BOTH key blocks with the content of YOUR cosign.pub (see the README,
+# step 3). The placeholder below is not a valid key.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-platform-images
+spec:
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: signed-and-sbom
+      match:
+        any:
+          - resources: { kinds: [Pod] }
+      verifyImages:
+        - imageReferences: ["idp-lab-control-plane:30880/*"]
+          failureAction: Enforce
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+          attestors:
+            - entries:
+                - keys:
+                    publicKeys: |-
+                      COSIGN_PUBLIC_KEY
+                    rekor: { ignoreTlog: true }    # signed with --tlog-upload=false (no public transparency log)
+                    ctlog: { ignoreSCT: true }
+          attestations:
+            - type: https://spdx.dev/Document
+              attestors:
+                - entries:
+                    - keys:
+                        publicKeys: |-
+                          COSIGN_PUBLIC_KEY
+                        rekor: { ignoreTlog: true }
+                        ctlog: { ignoreSCT: true }

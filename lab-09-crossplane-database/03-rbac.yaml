@@ -1,0 +1,13 @@
+# Crossplane v2 can compose ANY Kubernetes kind, but only if it has RBAC for it (aggregated into its ClusterRole).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crossplane:compose-database
+  labels: { rbac.crossplane.io/aggregate-to-crossplane: "true" }
+rules:
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources: ["services", "secrets"]
+    verbs: ["*"]

@@ -1,0 +1,8 @@
+# Points at the CANARY pods only, so the analysis can test the new version on its own.
+apiVersion: v1
+kind: Service
+metadata:
+  name: tenant-api-canary
+spec:
+  ports:
+    - { name: http, port: 80, targetPort: http }

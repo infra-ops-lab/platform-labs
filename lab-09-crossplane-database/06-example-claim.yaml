@@ -1,0 +1,16 @@
+# What a developer writes (or a Backstage template generates into their repo). Nothing cloud-specific.
+apiVersion: v1
+kind: Namespace
+metadata: { name: team-identity }
+---
+apiVersion: platform.lab/v1alpha1
+kind: Database
+metadata:
+  name: orders
+  namespace: team-identity
+spec:
+  size: small
+  tenant: acme
+  crossplane:
+    compositionSelector:
+      matchLabels: { provider: local }

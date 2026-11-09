@@ -1,0 +1,16 @@
+# Example teams for the Backstage catalog. Copy to ~/idp-lab/catalog/org.yaml.
+# In a real company these come from the identity provider through a catalog entity provider.
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata: { name: platform, description: Platform engineering }
+spec: { type: team, children: [] }
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata: { name: team-identity, description: Identity product team }
+spec: { type: team, children: [] }
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata: { name: team-payments, description: Billing and payments product team }
+spec: { type: team, children: [] }

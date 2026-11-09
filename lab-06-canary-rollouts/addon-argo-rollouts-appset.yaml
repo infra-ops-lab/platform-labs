@@ -1,0 +1,42 @@
+# Lab 6, part 1: the Argo Rollouts controller on every cell, as a fleet add-on.
+# The Rollout kind must exist wherever a service that uses it can land.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: addon-argo-rollouts
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - clusters:
+      selector:
+        matchExpressions:
+        - key: fleet.lab/cell            # every cell, never the hub
+          operator: Exists
+  template:
+    metadata:
+      name: 'argo-rollouts-{{ .name }}'
+      labels:
+        fleet.lab/addon: argo-rollouts
+        fleet.lab/cell: '{{ .name }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://argoproj.github.io/argo-helm
+        chart: argo-rollouts
+        targetRevision: 2.43.9           # pinned chart version
+        helm:
+          valuesObject:
+            controller: { replicas: 1 }
+            dashboard: { enabled: false }
+      destination:
+        server: '{{ .server }}'
+        namespace: argo-rollouts         # excluded from the Lab 5 pod policies
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+        - ServerSideApply=true           # the Rollout CRDs are large

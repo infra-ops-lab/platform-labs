@@ -1,0 +1,25 @@
+# Gitea Helm chart (gitea-charts/gitea) values for the lab hub: small, single pod, SQLite.
+# Install (choose your own admin password):
+#   helm install gitea gitea-charts/gitea --version 12.7.0 -n gitea --create-namespace \
+#     -f gitea-values.yaml --set gitea.admin.password='<choose-a-password>'
+gitea:
+  admin:
+    username: labadmin
+    email: labadmin@gitea.local
+  config:
+    database: { DB_TYPE: sqlite3 }
+    cache: { ADAPTER: memory }
+    session: { PROVIDER: memory }
+    queue: { TYPE: level }
+    server: { ROOT_URL: "http://localhost:3300/" }
+persistence:
+  size: 1Gi
+postgresql: { enabled: false }
+postgresql-ha: { enabled: false }
+valkey: { enabled: false }
+valkey-cluster: { enabled: false }
+service:
+  http:
+    type: NodePort
+    clusterIP: ""
+    nodePort: 30300                # kind maps this to http://localhost:3300

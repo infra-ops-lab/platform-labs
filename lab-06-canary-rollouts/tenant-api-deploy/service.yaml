@@ -1,0 +1,8 @@
+# The normal Service. During a rollout it points at the STABLE pods only.
+apiVersion: v1
+kind: Service
+metadata:
+  name: tenant-api
+spec:
+  ports:
+    - { name: http, port: 80, targetPort: http }

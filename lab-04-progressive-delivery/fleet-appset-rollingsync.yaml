@@ -1,0 +1,65 @@
+# Lab 4: the Lab 1 ApplicationSet plus a RollingSync strategy.
+# Ring 0 syncs first; ring 1 starts only when every ring-0 Application is Healthy.
+# Needs applicationsetcontroller.enable.progressive.syncs: "true" (see commands.md, step 1).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: fleet-services
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - matrix:
+      generators:
+      - scmProvider:
+          requeueAfterSeconds: 30
+          gitea:
+            owner: golden
+            api: http://gitea-http.gitea.svc:3000
+            insecure: true
+          filters:
+          - pathsExist: [deploy]
+      - clusters:
+          selector:
+            matchExpressions:
+            - key: fleet.lab/cell
+              operator: Exists
+  strategy:
+    type: RollingSync
+    rollingSync:
+      steps:
+      # Steps match labels on the generated Applications, which is why
+      # the template copies the cluster's ring label onto each Application.
+      - matchExpressions:
+        - key: fleet.lab/ring
+          operator: In
+          values: ["0"]
+      - matchExpressions:
+        - key: fleet.lab/ring
+          operator: In
+          values: ["1"]
+  template:
+    metadata:
+      name: '{{ .repository }}-{{ .name }}'
+      labels:
+        fleet.lab/service: '{{ .repository }}'
+        fleet.lab/cell: '{{ .name }}'
+        fleet.lab/ring: '{{ index .metadata.labels "fleet.lab/ring" }}'
+    spec:
+      project: default
+      source:
+        repoURL: 'http://gitea-http.gitea.svc:3000/{{ .organization }}/{{ .repository }}.git'
+        targetRevision: '{{ .branch }}'
+        path: deploy
+      destination:
+        server: '{{ .server }}'
+        namespace: '{{ .repository }}'
+      syncPolicy:
+        # Under RollingSync the controller turns automated sync off on each
+        # Application and triggers the syncs itself, step by step.
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true

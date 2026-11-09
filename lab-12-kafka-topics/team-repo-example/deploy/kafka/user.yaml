@@ -1,0 +1,20 @@
+# The service's identity on Kafka: an mTLS client cert (secret identity-svc in ns kafka), prefix ACLs, quotas.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: identity-svc
+  namespace: kafka
+  labels: { strimzi.io/cluster: platform, platform.lab/team: identity }
+spec:
+  authentication: { type: tls }
+  authorization:
+    type: simple
+    acls:
+      - resource: { type: topic, name: identity., patternType: prefix }
+        operations: [Read, Write, Describe]
+      - resource: { type: group, name: identity., patternType: prefix }
+        operations: [Read]
+  quotas:                               # noisy-neighbour protection on a shared cluster
+    producerByteRate: 1048576           # 1 MiB/s
+    consumerByteRate: 2097152           # 2 MiB/s
+    requestPercentage: 25

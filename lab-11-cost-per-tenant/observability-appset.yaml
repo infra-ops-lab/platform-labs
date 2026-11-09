@@ -1,0 +1,84 @@
+# Lab 11: observability and FinOps add-ons, on cell-1 only (the selector picks one cell).
+# Prometheus is the metrics backbone; OpenCost turns
+# usage x price into allocation per namespace / label (= per team, per tenant).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: addon-observability
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels: { fleet.lab/cell: cell-1 }
+  template:
+    metadata:
+      name: 'prometheus-{{ .name }}'
+      labels: { fleet.lab/addon: observability, fleet.lab/cell: '{{ .name }}' }
+    spec:
+      project: default
+      source:
+        repoURL: https://prometheus-community.github.io/helm-charts
+        chart: prometheus
+        targetRevision: 29.43.0
+        helm:
+          valuesObject:
+            alertmanager: { enabled: false }
+            prometheus-pushgateway: { enabled: false }
+            server:
+              fullnameOverride: prometheus-server   # stable Service name for OpenCost/Grafana
+              persistentVolume: { enabled: false }
+              retention: 2d
+              global: { scrape_interval: 30s }
+            kube-state-metrics:
+              # KSM exports NO labels by default. Without this, cost-by-tenant label is impossible (found while testing).
+              metricLabelsAllowlist:
+                - pods=[*]
+                - namespaces=[tenant.lab/id,team,cost-center]
+      destination:
+        server: '{{ .server }}'
+        namespace: monitoring
+      syncPolicy:
+        automated: { prune: true, selfHeal: true }
+        syncOptions: [CreateNamespace=true, ServerSideApply=true]
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: addon-opencost
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels: { fleet.lab/cell: cell-1 }
+  template:
+    metadata:
+      name: 'opencost-{{ .name }}'
+      labels: { fleet.lab/addon: finops, fleet.lab/cell: '{{ .name }}' }
+    spec:
+      project: default
+      source:
+        repoURL: https://opencost.github.io/opencost-helm-chart
+        chart: opencost
+        targetRevision: 2.5.33
+        helm:
+          valuesObject:
+            # Our own Kyverno guardrail (Lab 5) blocked this add-on until its pods carried the label:
+            # platform components must pass the same guardrails as tenants (or get an explicit PolicyException).
+            podLabels: { app.kubernetes.io/part-of: opencost }
+            opencost:
+              exporter: { defaultClusterId: '{{ .name }}' }
+              prometheus:
+                internal: { enabled: true, serviceName: prometheus-server, namespaceName: monitoring, port: 80 }
+              ui: { enabled: true }
+      destination:
+        server: '{{ .server }}'
+        namespace: opencost
+      syncPolicy:
+        automated: { prune: true, selfHeal: true }
+        syncOptions: [CreateNamespace=true, ServerSideApply=true]

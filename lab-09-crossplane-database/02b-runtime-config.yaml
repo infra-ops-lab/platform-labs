@@ -1,0 +1,13 @@
+# Optional: only needed if the hub also runs the Lab 5 guardrails (Kyverno, "pods need
+# app.kubernetes.io/part-of"). Crossplane runs each function as a Deployment; this gives
+# those pods the label. Then add `runtimeConfigRef: { name: platform-labels }` to each Function.
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata: { name: platform-labels }
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        metadata:
+          labels: { app.kubernetes.io/part-of: crossplane }

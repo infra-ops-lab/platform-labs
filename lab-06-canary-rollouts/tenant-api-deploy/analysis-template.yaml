@@ -1,0 +1,28 @@
+# The automatic test of the canary.
+# In production this is a Prometheus query: canary error rate and p99 latency compared with stable.
+# Here there is no Prometheus, so: call the canary 30 times, once a second (podinfo answers JSON on "/").
+# Any non-2xx answer is a measurement error, and with the limits at 0 one error fails the analysis.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: canary-health
+spec:
+  args:
+    - name: canary-service
+  metrics:
+    - name: canary-http-ok
+      interval: 1s
+      count: 30
+      failureLimit: 0
+      consecutiveErrorLimit: 0
+      successCondition: result.version != ""
+      provider:
+        web:
+          url: "http://{{ args.canary-service }}.tenant-api.svc/"
+          timeoutSeconds: 5
+          jsonPath: "{$}"
+          # A new connection for every call. Without this the controller reuses a keep-alive
+          # connection that was opened while this Service still pointed at the STABLE pods, and
+          # kube-proxy keeps sending it there, so the "canary" test silently tests stable.
+          headers:
+            - { key: Connection, value: close }
