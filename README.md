@@ -38,13 +38,6 @@ and questions to think through.
 
 Labs 6–12 build on Labs 1–5; 7, 8 and 9 can be done in any order.
 
-## Security
-
-| Topic | You learn |
-|---|---|
-| [Security interview guide](security/README.md) | 23 topics from identity to incident response: 30-second answers, deeper points, commands, follow-up questions |
-| [Tenant RBAC lab](security/tenant-rbac/README.md) | One kind cluster: x509 users via the CSR API, group RBAC, escalation tests, quota, LimitRange, Pod Security, NetworkPolicy, then break it on purpose |
-
 **Test yourself:** [Quiz](quiz/README.md): 80 multiple-choice questions on every lab, with answers and explanations. The website also has an [interactive version](https://infra-ops-lab.github.io/platform-labs/quiz/play.html) (random order, pick the labs, score).
 
 ## Conventions used in every lab
