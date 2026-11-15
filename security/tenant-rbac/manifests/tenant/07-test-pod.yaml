@@ -1,0 +1,18 @@
+# Step 7 test: PSA-restricted pod with NO resources -> LimitRange fills in defaults.
+# No namespace on purpose: apply as bob with -n acme-dev.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: t
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile: { type: RuntimeDefault }
+  containers:
+  - name: t
+    image: busybox:1.37
+    command: ["sleep", "3600"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities: { drop: ["ALL"] }

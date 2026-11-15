@@ -9,6 +9,9 @@ app-config.local.yaml
 .env.*
 *.pem
 *.key
+*.csr
+*.crt
+security/tenant-rbac/certs/
 
 # Editors and OS
 .DS_Store

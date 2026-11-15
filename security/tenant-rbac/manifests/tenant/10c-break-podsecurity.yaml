@@ -1,0 +1,16 @@
+# Step 10c: violates PSA restricted (privileged). Deployment is created, pods are not.
+# No namespace: apply as bob with -n acme-dev.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: rooty }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: rooty } }
+  template:
+    metadata: { labels: { app: rooty } }
+    spec:
+      containers:
+      - name: c
+        image: busybox:1.37
+        command: ["sleep", "3600"]
+        securityContext: { privileged: true }
